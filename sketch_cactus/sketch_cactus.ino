@@ -2,15 +2,14 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-//#include <ESP8266Ping.h>
-/*
-#define BLYNK_TEMPLATE_ID "TMPLBeqnfO66"
-#define BLYNK_DEVICE_NAME "Cactus"
-#define BLYNK_AUTH_TOKEN  BLYNK_TOKEN_6
-*/
+//Generated from secrets.tmplh
+#include "secrets.h"
+
 #define BLYNK_TEMPLATE_ID "TMPLBeqnfO66"
 #define BLYNK_DEVICE_NAME "Cactus"
 #define BLYNK_AUTH_TOKEN BLYNK_TOKEN_5
+#define USE_SCHEDULE 0
+
 
 // Comment this out to disable prints and save space
 #define BLYNK_PRINT Serial
@@ -21,7 +20,6 @@
 #include <BlynkSimpleEsp8266.h>
 
 const char auth[] = BLYNK_AUTH_TOKEN;
-
 const char ssid[]   = WIFI_SSID;
 const char password[] = WIFI_PASS;
 
@@ -43,16 +41,8 @@ bool pumpOverride;
 double adcValue;
 double wetness;
 
-// By default 'pool.ntp.org' is used with 60 seconds update interval and
-// no offset
-NTPClient timeClient(ntpUDP);
-
-// You can specify the time server pool and the offset, (in seconds)
-// additionally you can specify the update interval (in milliseconds).
-// NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
-
-
-
+// timeClient(connection,server address, offset in ms, update rate in ms);
+NTPClient timeClient(ntpUDP,"europe.pool.ntp.org", 0, 10000);
 
 // LED connected to GPIO 2
 #define ledPin1 2
@@ -284,18 +274,11 @@ void setup()
   // Setup a function to be called every second
   timer.setInterval(1000L, myTimerEvent);
   Serial.setDebugOutput(true);
-/*
-  if(Ping.ping(remote_host)) {
-    Serial.println("Success!!");
-  } else {
-    Serial.println("Error :(");
-  }
-*/
-  
+
   setupBlynk();
 }
 
-
+// The 'main' is always called loop
 void loop()
 {
   if(blynkSetupDone)Blynk.run();
