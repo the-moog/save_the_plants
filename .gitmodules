@@ -1,0 +1,3 @@
+[submodule "sketch_aug16a/ESP8266Ping"]
+	path = sketch_aug16a/ESP8266Ping
+	url = https://github.com/dancol90/ESP8266Ping
