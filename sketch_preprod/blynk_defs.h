@@ -1,5 +1,9 @@
+#ifndef __BLYNK_DEFS_H__
+#define __BLYNK_DEFS_H__
+
+
 /*
-This file includes the Blynp API headers and
+This file includes the Blynk API headers and
 is where the various macros required for the template
 are placed
 */
@@ -41,3 +45,6 @@ BLYNK_CONNECTED()
   Blynk.setProperty(V3, "onImageUrl",  "https://static-image.nyc3.cdn.digitaloceanspaces.com/general/fte/congratulations_pressed.png");
   Blynk.setProperty(V3, "url", "https://docs.blynk.io/en/getting-started/what-do-i-need-to-blynk/how-quickstart-device-was-made");
 }
+
+
+#endif

@@ -4,13 +4,8 @@
 //Generated from secrets.tmplh
 #include "secrets.h"
 
-#include "hw_defs.h"
+#include "target_node.h"
 
-#define USB_SW_TEMPLATE "TMPLjlHMNf6L"
-
-#define BLYNK_TEMPLATE_ID USB_SW_TEMPLATE
-#define BLYNK_DEVICE_NAME "preprod"
-#define BLYNK_AUTH_TOKEN BLYNK_TOKEN_7
 #define USE_SCHEDULE 0
 
 
