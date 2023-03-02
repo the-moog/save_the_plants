@@ -50,3 +50,9 @@ Plug the board into a USB
 
 Sketch -> Upload
 
+
+
+References:
+
+Arduino API         : https://www.arduino.cc/reference/en/
+Blynk Firmware API  : https://docs.blynk.io/en/blynk.edgent-firmware-api

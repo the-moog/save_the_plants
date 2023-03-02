@@ -4,8 +4,9 @@
         "**/.vscode": true,
         "**/.vs": true
     },
-    "C_Cpp.default.compilerPath": "c:\\Users\\jasomorg\\Documents\\ArduinoData\\packages\\esp8266\\tools\\xtensa-lx106-elf-gcc\\3.1.0-gcc10.3-e5f9fec\\bin",
     "C_Cpp.default.cppStandard": "c++11",
     "C_Cpp.default.cStandard": "c11",
-    "C_Cpp.default.compileCommands": "xtensa-lx106-elf-gcc.exe"
+    "arduino.additionalUrls": [
+        "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
+    ]
 }
