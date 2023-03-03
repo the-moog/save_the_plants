@@ -10,3 +10,6 @@
 [submodule "Async_Operations"]
 	path = Async_Operations
 	url = https://github.com/DaniFoldi/Async_Operations
+[submodule "RemoteXY-Arduino-library"]
+	path = RemoteXY-Arduino-library
+	url = https://github.com/RemoteXY/RemoteXY-Arduino-library
