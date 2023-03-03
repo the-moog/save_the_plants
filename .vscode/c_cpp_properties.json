@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Arduino",
-            "compilerPath": "${LOCALAPPDATA}\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\3.1.1\\tools\\warnings\\none-g++",
+            "compilerPath": "${LOCALAPPDATA}\\Arduino15\\packages\\esp8266\\tools\\xtensa-lx106-elf-gcc\\3.1.0-gcc10.3-e5f9fec\\bin\\xtensa-lx106-elf-g++.exe",
             "compilerArgs": [
                 "-U__STRICT_ANSI__",
                 "-fstack-protector",
@@ -25,7 +25,7 @@
                 "${LOCALAPPDATA}\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\3.1.1\\variants\\generic",
                 "${LOCALAPPDATA}\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\3.1.1\\libraries\\ESP8266WiFi\\src",
                 "C:\\Users\\jasomorg\\Documents\\Arduino\\libraries\\Async_Operations",
-                "${workspaceFolder}\\..\\libraries\\RemoteXY\\src"
+                "${workspaceFolder}\\..\\libraries\\Async_Operations"
             ],
             "forcedInclude": [
                 "${LOCALAPPDATA}\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\3.1.1\\cores\\esp8266\\Arduino.h"
