@@ -4,16 +4,25 @@
 #define USE_WIFI_NETWORK
 #define USE_WEBSOCKETS
 
+#include <ESP8266HTTPClient.h>
+#include <PubSubClient.h>
+
+
 #ifndef USE_WIFI_NETWORK
 #include <ArduinoSerialToTCPBridgeClient.h>
 #else
 #include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecureBearSSL.h>
 #endif
 #ifdef USE_WEBSOCKETS
-#include <ArduinoWebsockets.h>
+#include "WebSocketStreamClient.h"
 #endif
 
-#include "Adafruit_MQTT_Client.h"
+#include "certs.h"
+//#include "Adafruit_MQTT_Client.h"
 #include "secrets.h"
 /************************* WiFi Access Point *********************************/
 
@@ -22,10 +31,12 @@
 
 /************************* Adafruit.io Setup *********************************/
 
-#define AIO_SERVER      "io.adafruit.com"
+//#define AIO_SERVER      MQTT_HOST
+//"io.adafruit.com"
 
 //#ifndef USE_WEBSOCKETS
-#define AIO_SERVERPORT  1883
+//#define AIO_SERVERPORT  8884
+//1883
 //#else
 //#define AIO_SERVERPORT  443
 //#endif
@@ -44,10 +55,18 @@
 #define Serial_print(...)
 #endif
 /************ Global State (you don't need to change this!) ******************/
+/*
+NOTE ON SSL:
+For TLS or SSL to work (i.e. https) you need a server certificate
+use the command ..\certUpdate.bat from within this project folder
+This reads .\secrets.h and creates .\certs.h to match
+
+*/
+
 
 // Create an ESP8266 WiFiClient class to connect to the MQTT server.
 #ifdef USE_WIFI_NETWORK
-WiFiClient net;
+WiFiClientSecure * net;
 #define SERIAL_BAUD 115200
 #else
 ArduinoSerialToTCPBridgeClient net;
@@ -55,14 +74,16 @@ ArduinoSerialToTCPBridgeClient net;
 #endif
 
 #ifdef USE_WEBSOCKETS
-websockets::WebsocketsClient * ws;
+WebSocketClient * ws;
+WebSocketStreamClient * ws_client;
 #endif
 
-Adafruit_MQTT_Client * mqtt;
+//Adafruit_MQTT_Client * mqtt;
+PubSubClient * mqttClient;
 
 #ifdef USE_WEBSOCKETS
 
-
+/*
 void onMessageCallback(WebsocketsMessage message) {
     Serial_print("Got Message: ");
     Serial_println(message.data());
@@ -79,7 +100,7 @@ void onEventsCallback(WebsocketsEvent event, String data) {
         Serial_println("Got a Pong!");
     }
 }
-
+*/
 #endif
 
 
@@ -89,7 +110,7 @@ void onEventsCallback(WebsocketsEvent event, String data) {
 #define pin_onoff_prod 4
 #define pin_onoff_preprod 5
 
-
+X509List cert(Root_CA);
 
 int seconds;
 int minutes;
@@ -207,7 +228,7 @@ void setupIO()
   digitalWrite(pin_onoff_prod, LOW);
 }
 
-
+/*
 Adafruit_MQTT_Subscribe * feed_time;
 Adafruit_MQTT_Subscribe * feed_pulse_ms;
 Adafruit_MQTT_Subscribe * feed_onoff0;
@@ -216,8 +237,6 @@ Adafruit_MQTT_Subscribe * feed_pulse0;
 Adafruit_MQTT_Subscribe * feed_pulse1; 
 
 void setupSubscriptions() {
-  /****************************** Feeds ***************************************/
-
   feed_time = new Adafruit_MQTT_Subscribe(mqtt, "time/seconds");
   feed_pulse_ms = new Adafruit_MQTT_Subscribe(mqtt, AIO_USERNAME "/feeds/pulse_ms", MQTT_QOS_1);
   feed_onoff0 = new Adafruit_MQTT_Subscribe(mqtt, AIO_USERNAME "/feeds/onoff0", MQTT_QOS_1);
@@ -231,6 +250,65 @@ void setupSubscriptions() {
   feed_onoff0->setCallback(callback_onoff0);
   feed_onoff1->setCallback(callback_onoff1);
 }
+*/
+
+
+bool mqttConnect() {
+  // Connect to server
+  //ws->connectSecure(AIO_SERVER, 443, "/");
+  ESP.wdtFeed();
+  // Send a message
+  //ws->send("Hi Server!");
+  // Send a ping
+  //ws->ping();
+  mqttClient->setCallback(MQTTcallback);
+  Serial_println();
+
+  String uid = "QDEVSYS" + String((unsigned long long)net);
+
+  Serial.print("UID: ");
+  Serial.println(uid);
+
+  bool connected = mqttClient->connect(uid.c_str(), AIO_USERNAME, AIO_KEY);
+  // Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
+  //mqtt = new Adafruit_MQTT_Client(ws_client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_USERNAME, AIO_KEY);
+
+  //setupSubscriptions();
+
+  //MQTT_connect();
+  if(connected) {
+    Serial_println("Connected");
+    Serial_println("Subscribing to #");
+    mqttClient->subscribe("#");
+  } else {
+    Serial_println("ws connect fail");
+  }
+
+  ESP.wdtFeed();
+  Serial_print("HTTP State: ");
+  Serial_println(ws->responseStatusCode());
+  Serial_print("MQTT State: ");
+  Serial_println(mqttClient->state());
+  return connected && mqttClient->state() == MQTT_CONNECTED;
+}
+
+void setupNTP() {
+  // Set time via NTP, as required for x.509 validation
+  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+
+  Serial.print("Waiting for NTP time sync: ");
+  time_t now = time(nullptr);
+  while (now < 8 * 3600 * 2) {
+    delay(500);
+    Serial.print(".");
+    now = time(nullptr);
+  }
+  Serial.println("");
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  Serial.print("Current time: ");
+  Serial.print(asctime(&timeinfo));
+}
 
 void setup() {
 
@@ -238,8 +316,9 @@ void setup() {
 
   Serial.begin(SERIAL_BAUD);
   delay(5000);
+  ESP.wdtFeed();
 
-  Serial_println(F("Remote USB Unplug over MQTT"));
+  Serial_println("\n\nRemote USB Unplug over MQTT");
   Serial_println();
 
 
@@ -248,11 +327,15 @@ void setup() {
   Serial_println();
   Serial_print("Connecting to WIFI: ");
   Serial_println(WLAN_SSID);
+  net = new WiFiClientSecure();
+  //net->setInsecure();
+
   WiFi.begin(WLAN_SSID, WLAN_PASS);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial_print(".");
+    ESP.wdtFeed();
   }
   Serial_println();
   Serial_println("WIFI Connected, IP address: ");
@@ -263,37 +346,39 @@ void setup() {
   Serial_println();
 #endif
 
-  ws = new websockets::WebsocketsClient();
- 
+  setupNTP();
+
+  Serial.print("Connecting to ");
+  Serial.println(myhost_fqdn);
+
+  Serial.printf("Using certificate: %s\n", Root_CA);
+  net->setTrustAnchors(&cert);
+
+  ws = new WebSocketClient(*net, myhost_fqdn, myhost_port);
+  Serial_print("HTTP State: ");
+  Serial_println(ws->responseStatusCode());
+  ws_client = new WebSocketStreamClient(*ws, "mqtt");
+  mqttClient = new PubSubClient(*ws_client);
+  Serial_print("MQTT State: ");
+  Serial_println(mqttClient->state());
+
   // Setup Callbacks
-  ws->onMessage(onMessageCallback);
-  ws->onEvent(onEventsCallback);
+  //ws->onMessage(onMessageCallback);
+  //ws->onEvent(onEventsCallback);
   ///client.setClient(*s);
-  ws->setInsecure();
 
-  // Connect to server
-  ws->connectSecure(AIO_SERVER, 443, "/");
+  mqttConnect();
 
-  // Send a message
-  //ws->send("Hi Server!");
-  // Send a ping
-  ws->ping();
 
-  Serial_println();
-
-  // Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
-  mqtt = new Adafruit_MQTT_Client(static_cast<Client *>(ws), AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_USERNAME, AIO_KEY);
-
-  setupSubscriptions();
-
-  MQTT_connect();
 
   // Setup MQTT subscription for time feed.
+  /*
   mqtt->subscribe(feed_time);
   mqtt->subscribe(feed_pulse0);
   mqtt->subscribe(feed_pulse1);
   mqtt->subscribe(feed_onoff0);
   mqtt->subscribe(feed_onoff1);
+*/
 
 
 }
@@ -301,23 +386,28 @@ void setup() {
 
 
 void loop() {
+  ESP.wdtFeed();
   // Ensure the connection to the MQTT server is alive (this will make the first
   // connection and automatically reconnect when disconnected).  See the MQTT_connect
   // function definition further below.
-  ws->poll();
+  //ws->poll();
 
-  MQTT_connect();
+  //MQTT_connect();
 
   // this is our 'wait for incominutesg subscription packets and callback em' busy subloop
   // try to spend your time here:
-  mqtt->processPackets(10000);
+  //mqtt->processPackets(10000);
   
   // ping the server to keep the mqtt connection alive
   // NOT required if you are publishing once every KEEPALIVE secondsonds
   
-  if(! mqtt->ping()) {
-    mqtt->disconnect();
-  }
+  //if(! mqtt->ping()) {
+  //  mqtt->disconnect();
+  //}
+
+  if (!mqttClient->connected()) reconnectMQTT();
+
+  mqttClient->loop();
 
   for(unsigned int chan=0;chan<1;chan++) {
     if (next_pulse_evt_ms[chan] < millis()){
@@ -328,6 +418,8 @@ void loop() {
   }
 }
 
+
+/*
 // Function to connect and reconnect as necessary to the MQTT server.
 // Should be called in the loop function and it will take care if connecting.
 void MQTT_connect() {
@@ -352,4 +444,35 @@ void MQTT_connect() {
     }
   }
   Serial_println("MQTT Connected!");
+}
+*/
+
+
+void reconnectMQTT()
+{
+  while (!mqttClient->connected())
+  {
+    Serial_print("Attempting MQTT connection...");
+
+    if (! mqttConnect()) {
+      Serial_print("failed, rc=");
+      Serial_print(mqttClient->state());
+      Serial_println(" try again in 5 seconds");
+
+      for(int n=0;n<50;n++) {
+        ESP.wdtFeed();
+        delay(100);
+      }
+    }
+  }
+}
+
+
+void MQTTcallback(char *topic, byte *payload, unsigned int length)
+{
+    Serial_print("Payload: ");
+    for (int i = 0; i < length; i++)
+        Serial_print((char)payload[i]);
+
+    Serial_println();
 }
