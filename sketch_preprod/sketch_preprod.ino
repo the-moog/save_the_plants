@@ -46,7 +46,7 @@ void setupWiFi()
 
   WiFi.begin(ssid, password);
 
-  Serial.print("Connecting");
+  Serial.print("Connecting WiFi");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
@@ -54,7 +54,7 @@ void setupWiFi()
   }
   Serial.println();
 
-  Serial.print("Connected, IP address: ");
+  Serial.println("WiFi Connected, IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.subnetMask());
   Serial.println(WiFi.gatewayIP());
@@ -192,10 +192,18 @@ void setupBlynk()
   // You can also specify server:
   //Blynk.begin(auth, ssid, pass, "blynk.cloud", 80);
   //Blynk.begin(auth, ssid, pass, IPAddress(192,168,1,100), 8080);
-
+  
   Serial.println("Connecting Blynk");
+  Serial.print("Template ID: ");
+  Serial.println(BLYNK_TEMPLATE_ID);
+  //Serial.print("Template   : ");
+  //Serial.println(BLYNK_TEMPLATE_NAME);
+  Serial.print("Token: ");
+  Serial.println(BLYNK_AUTH_TOKEN);
+
   // Setup Blynk
-  Blynk.config(auth);
+  Blynk.config(auth);//, "blink-cloud.com", 80);
+
   while (Blynk.connect() == false) {
     Serial.print("+");
   }

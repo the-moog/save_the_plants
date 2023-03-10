@@ -22,7 +22,7 @@
 //////////////////////////////////////////////
 
 // RemoteXY select connection mode and include library 
-#define REMOTEXY_MODE__WIFI_CLOUD
+define REMOTEXY_MODE__WIFI_CLOUD
 
 // RemoteXY connection settings 
 #define REMOTEXY_WIFI_SSID "Hydra"
@@ -31,7 +31,10 @@
 #define REMOTEXY_CLOUD_PORT 6376
 #define REMOTEXY_CLOUD_TOKEN "0d15d9a763d644975b4789cf2f8d9ce0"
 
-#define REMOTEXY__DEBUGLOG
+//#define REMOTEXY__DEBUGLOG
+// Setting to zero prevents re-init
+#define CONSOLE_BAUDRATE 230400
+//#define REMOTEXY_SERIAL_SPEED CONSOLE_BAUDRATE
 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
@@ -79,8 +82,6 @@ struct {
 #define relay_preprod_pin 4
 #define relay_prod_pin 5
 
-// ESP8266 Analog Pin ADC0 = A0
-#define analogPin A0 
 
 bool serialSetupDone;
 Async_Operations * clock_tick;
@@ -101,7 +102,7 @@ void setupGlobals(){
 void setupSerial()
 {
   if (serialSetupDone) return;
-  Serial.begin(115200);
+  Serial.begin(CONSOLE_BAUDRATE);
   Serial.println();
   serialSetupDone = true;
 }
@@ -124,13 +125,21 @@ void setup()
   //esp_delay(5000);
   Serial.println("Init done: Connecting....");
   //remotexy = new CRemoteXY (RemoteXY_CONF_PROGMEM, &RemoteXY, "", new CRemoteXYConnectionCloud (new CRemoteXYComm_WiFi ("Hydra", "K5x48Vz3"), "cloud.remotexy.com", 6376, "0d15d9a763d644975b4789cf2f8d9ce0"))
-  RemoteXY_Init(); 
-  
-  Serial.println("Connected?");
-  if(RemoteXY_isConnected()) Serial.println("Yes");
-  else Serial.println("NO!");
+
+//  updateMsg(L"CONNECTING");
+
+  do {
+    RemoteXY_Init(); 
+    if ( ! RemoteXY_isConnected() ) {
+      delay(1000);
+      Serial.println("Connect fail: retry");
+    }
+  } while ( ! RemoteXY_isConnected());
+
+  Serial.println("Connected!");
+
   // TODO you setup code
-  updateMsg(L"Hello");
+//  updateMsg(L"Hello");
 }
 
 void handlePreprodButton(evt_time_t, evt_data_t) {
