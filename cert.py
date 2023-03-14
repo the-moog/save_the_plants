@@ -63,6 +63,7 @@ def printData(data, showPub = True, symbol=None):
         cert = xcert.public_bytes(Encoding.PEM).decode('utf-8')
         print('const char cert_{} [] PROGMEM = R"CERT('.format(name))
         print(cert + ')CERT";')
+        print('const char cert_cn_{} [] PROGMEM = "{}";'.format(name, cn))
 
     cas = []
     for ext in xcert.extensions:
@@ -93,15 +94,16 @@ def get_certificate(hostname, port, name):
         with context.wrap_socket(sock, server_hostname=hostname) as ssock:
             pem = ssock.getpeercert(binary_form=True)
     print('////////////////////////////////////////////////////////////')
-    print('// certificate chain for {}:{}'.format(hostname, port))
+    print(f'// certificate chain for {hostname}:{port}')
     print()
     if name:
-        print('const char * {}_fqdn = "{}";'.format(name, hostname));
-        print('const uint16_t {}_port = {};'.format(name, port));
+        print(f'const char * {name}_fqdn = "{hostname}";')
+        print(f'const uint16_t {name}_port = {port};')
         print()
     symbol = printData(pem, symbol=name)
-    print("const char * const Root_CA = cert_{};".format(symbol))
-    print('// end of certificate chain for {}:{}'.format(hostname, port))
+    print(f'const char * const Root_CA = cert_{symbol};')
+    print(f'const char * const Root_CA_cn = cert_cn_{symbol};')
+    print(f'// end of certificate chain for {hostname}:{port}')
     print('////////////////////////////////////////////////////////////')
     print()
     return 0
