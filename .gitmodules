@@ -13,3 +13,6 @@
 [submodule "RemoteXY-Arduino-library"]
 	path = RemoteXY-Arduino-library
 	url = https://github.com/RemoteXY/RemoteXY-Arduino-library
+[submodule "SerialToTCPBridgeProtocol"]
+	path = SerialToTCPBridgeProtocol
+	url = https://github.com/RoanBrand/SerialToTCPBridgeProtocol
