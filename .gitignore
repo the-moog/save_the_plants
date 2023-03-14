@@ -54,3 +54,6 @@ dkms.conf
 **/*.bin
 **/__pycache__
 **/secrets.h
+
+#Auto generated
+mqtt/certs.h
