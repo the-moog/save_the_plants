@@ -1,4 +1,5 @@
 {
+    "C_Cpp.errorSquiggles": "enabled",
     "C_Cpp.files.exclude": {
         "**/.vscode": true,
         "**/.vs": true
