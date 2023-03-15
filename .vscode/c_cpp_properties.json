@@ -3,12 +3,13 @@
     "env": {
         "ArduinoESP": "${LOCALAPPDATA}/Arduino15/packages/esp8266",
         "ESPhome": "${ArduinoESP}/hardware/esp8266/3.1.1",
-        "LibBase": "${workspaceFolder}/../Libraries",
+        "LibBase": "${workspaceFolder}/../libraries",
         "Libraries": [
             "${LibBase}/ArduinoWebsocketMQTTClient/ArduinoHttpClient/src",
             "${LibBase}/ArduinoWebsocketMQTTClient/WebSocketStreamClient/src",
             "${LibBase}/PubSubClientTools",
-            "${LibBase}/PubSubClient/src"
+            "${LibBase}/PubSubClient/src",
+            "${LibBase}/ArduinoThread"
         ],
         "Projects": [
             "${workspaceFolder}/mqtt"
