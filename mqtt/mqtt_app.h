@@ -1,17 +1,17 @@
-#include "secrets.h"
+#ifndef __MQTT_DEFS_H__
+#define __MQTT_DEFS_H__
+
+// Definitions that decide what app features are enabled
+// and how it behaves
 
 #define USE_WIFI_NETWORK
-#undef USE_MQTT_PUBLISHER
+#define USE_MQTT_PUBLISHER
 #undef USE_HTTP_ERR_PRETTY
 
-#include <ESP8266HTTPClient.h>
-#include <PubSubClient.h>
-#include <PubSubClientTools.h>
-#include <string>
-#include <stdexcept>
+#include "secrets.h"
+
+#endif
+
 	
 
-#ifdef USE_MQTT_PUBLISHER
-#include <Thread.h>
-#include <ThreadController.h>
-#endif
+

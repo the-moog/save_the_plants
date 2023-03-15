@@ -1,39 +1,16 @@
 
-#include "mqtt_app.h"
+#include "mqtt_defs.h"
 
 
 
-// Ensure the compiler does not get the storage wrong
-// for strings as otherwise they take up a lot of our 4k stack
-#define ROMSTR(v,s) const typeof(*s) * v PROGMEM = s
-
-#ifndef USE_WIFI_NETWORK
-#include <ArduinoSerialToTCPBridgeClient.h>
-#else
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
-#ifdef USE_SSL
-#include <WiFiClientSecureBearSSL.h>
-#endif
-#endif
-
-#ifdef USE_WEBSOCKETS
-#include "WebSocketStreamClient.h"
-#endif
-#ifdef USE_SSL
-#include "certs.h"
-#else
+#ifndef USE_SSL
 ROMSTR(myhost_fqdn, MQTT_HOST);
 const uint16_t myhost_port = MQTT_PORT;
 #endif
 
-//#include "Adafruit_MQTT_Client.h"
-//#define tmpvar var_##__LINE__
-//#define MSG(x) {romstr_t tmpvar = x;Serial.write(tmpvar);}
 ROMSTR(msg_connected, "Connected\r\n");
 ROMSTR(msg_crlf, "\r\n");
 ROMSTR(msg_null, "");
-
 
 #ifdef USE_HTTP_ERR_PRETTY
 const char * http_error_str [] PROGMEM = {
@@ -46,51 +23,32 @@ const char * http_error_str [] PROGMEM = {
 const int http_error_count = sizeof(http_error_str)/sizeof(const char *);
 #endif
 
-#ifdef USE_WIFI_NETWORK
-#define MSG(x) Serial.write(x)
-#else
-#define MSG(x) 
-#endif
+
 
 #define MSG_CRLF MSG(msg_crlf)
 #define MSG_CONNECTED MSG(msg_connected)
 
-#ifdef USE_WIFI_NETWORK
-#define Serial_printf(...) Serial.printf(__VA_ARGS__)
-#else
-#define Serial_printf(...)
-#endif
 
-#ifdef USE_WIFI_NETWORK
-#define Serial_print(...) Serial.print(__VA_ARGS__)
-#else
-#define Serial_print(...)
-#endif
-
-#ifdef USE_WIFI_NETWORK
-#define Serial_println(...) Serial.println(__VA_ARGS__)
-#else
-#define Serial_print(...)
-#endif
 
 /*
 NOTE ON SSL:
 For TLS or SSL to work (i.e. https) you need a server certificate
-use the command ..\certUpdate.bat from within this project folder
-This reads .\secrets.h and creates .\certs.h to match
+use the command ..\certUpdate.bat (or ../certUpdate.sh) from within
+this project folder
+This reads .\secrets.h and creates a .\certs.h to match
 */
 
 
 #ifdef USE_WIFI_NETWORK
-#ifdef USE_SSL
-WiFiClientSecure netClient;
-#else
-WiFiClient netClient;
-#endif
-#define SERIAL_BAUD 115200
-#else
-ArduinoSerialToTCPBridgeClient netClient;
-#define SERIAL_BAUD 921600
+  #ifdef USE_SSL
+   WiFiClientSecure netClient;
+  #else
+   WiFiClient netClient;
+  #endif
+  #define SERIAL_BAUD 115200
+ #else
+  ArduinoSerialToTCPBridgeClient netClient;
+  #define SERIAL_BAUD 921600
 #endif
 
 #ifdef USE_HTTP_ERR_PRETTY
@@ -109,8 +67,8 @@ PubSubClient mqttClient(wsStream);
 PubSubClientTools mqtt(mqttClient);
 
 #ifdef USE_MQTT_PUBLISHER
-ThreadController threadControl();
-Thread thread();
+ThreadController threadControl = ThreadController();
+Thread thread = Thread();
 #endif
 
 #define pin_onoff_prod 4
@@ -120,10 +78,10 @@ Thread thread();
 X509List cert(Root_CA);
 #endif
 
-static unsigned long long next_connect = 0LL;
+static unsigned long long next_connect = 0ULL;
 static unsigned short int pulse_ms = 100;
 static bool onoff[2] = {false, false};
-static unsigned long long next_pulse_evt_ms [2] = {0LL, 0LL};
+static unsigned long long next_pulse_evt_ms [2] = {0ULL, 0ULL};
 
 // Helper to parse the REST like MQTT message for the channel number
 int get_chan(const std::string & text) {
@@ -148,9 +106,22 @@ void callback_pulse_ms(const std::string & topic, const std::string & msg) {
   pulse_ms = (unsigned short)(value * 1000.0); 
 }
 
+// Called by MQTT
+void callback_onoff(const std::string & topic, const std::string & msg) {
+  int chan = get_chan(topic);
+  if (chan < 0)return;
+  
+  handle_onoff(chan, msg);
+}
+
+void callback_pulse(const std::string & topic, const std::string & msg) {
+  int chan = get_chan(topic);
+  if (chan < 0)return;
+  handle_pulse(chan, msg);
+}
+
 // Handle the messages for onoff
 void handle_onoff(int chan, const std::string & msg) {
-  char ch;
   signed char val = msg[0] - '0';
   if (chan < 0 || chan > 1) return;
   if (val < 0 || val > 1) return;
@@ -166,7 +137,8 @@ void handle_onoff(int chan, const std::string & msg) {
 // Requesting a pulse either makes a pulse now (on->off-> or off->on->off)
 // or extends an existing pulse
 void handle_pulse(int chan, const std::string & msg) {
-  char ch;
+  (void)msg;
+
   unsigned long long now = millis();
   unsigned long long next = now + pulse_ms;
   bool pulse_active = next_pulse_evt_ms[chan] != 0L;
@@ -186,24 +158,6 @@ void handle_pulse(int chan, const std::string & msg) {
   
   Serial_printf("%3.4fs pulse triggered on chan %d\r\n", pulse_ms / 1000.0, chan);
 }
-
-
-
-
-// Called by MQTT
-void callback_onoff(const std::string & topic, const std::string & msg) {
-  int chan = get_chan(topic);
-  if (chan < 0)return;
-  
-  handle_onoff(chan, msg);
-}
-
-void callback_pulse(const std::string & topic, const std::string & msg) {
-  int chan = get_chan(topic);
-  if (chan < 0)return;
-  handle_pulse(chan, msg);
-}
-
 
 
 // Setup the IO pins for the relays
@@ -236,11 +190,13 @@ int mqttConnect() {
   bool connected = mqttClient.connect(uid, MQTT_USERNAME, MQTT_KEY);
   if (connected) {
     MSG_CONNECTED;
-    mqtt.subscribe(F("cfg/pulse_ms"), MAKE_CALLBACK(callback_pulse_ms));
-    mqtt.subscribe(F("dev/onoff/0"),  MAKE_CALLBACK(callback_onoff));
-    mqtt.subscribe(F("dev/onoff/1"),  MAKE_CALLBACK(callback_onoff));
-    mqtt.subscribe(F("dev/pulse/0"),  MAKE_CALLBACK(callback_pulse));
-    mqtt.subscribe(F("dev/pulse/1"),  MAKE_CALLBACK(callback_pulse));
+    /*
+    mqtt.subscribe(F("cfg/pulse_s"), MAKE_CALLBACK(callback_pulse_ms));
+    mqtt.subscribe(F("dev/onoff/0"), MAKE_CALLBACK(callback_onoff));
+    mqtt.subscribe(F("dev/onoff/1"), MAKE_CALLBACK(callback_onoff));
+    mqtt.subscribe(F("dev/pulse/0"), MAKE_CALLBACK(callback_pulse));
+    mqtt.subscribe(F("dev/pulse/1"), MAKE_CALLBACK(callback_pulse));
+    */
   } else {
     MSG("Connect Fail\r\n");
   }
@@ -265,6 +221,15 @@ void delay_s(unsigned long ms) {
   }
 }
 
+String getRealTime(){
+  String timestr;
+  time_t now = time(nullptr);
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  timestr = asctime(&timeinfo);
+  return timestr;
+}
+
 // Connect to NTP
 ROMSTR(ntp_server0, "pool.ntp.org");
 ROMSTR(ntp_server1, "time.nist.gov");
@@ -280,10 +245,8 @@ void setupNTP() {
     now = time(nullptr);
   }
   MSG_CRLF;
-  struct tm timeinfo;
-  gmtime_r(&now, &timeinfo);
   MSG("Current time: ");
-  Serial.print(asctime(&timeinfo));
+  Serial.print(getRealTime());
 }
 
 // Connect to WIFI
@@ -346,7 +309,7 @@ void setup() {
 #ifdef USE_MQTT_PUBLISHER
   // Enable Thread
   thread.onRun(publisher);
-  thread.setInterval(2000);
+  thread.setInterval(10000);
   threadControl.add(&thread);
 #endif
 }
@@ -354,7 +317,7 @@ void setup() {
 // Update the relay states
 void relayLoop() {
   for(unsigned int chan=0;chan<1;chan++) {
-    if (millis() > next_pulse_evt_ms[chan] & next_pulse_evt_ms[chan] !=0L) {
+    if ((millis() > next_pulse_evt_ms[chan]) && (next_pulse_evt_ms[chan] !=0L)) {
       onoff[chan] = !onoff[chan];
       next_pulse_evt_ms[chan] = 0L;
     }
@@ -377,16 +340,18 @@ void loop() {
 
   //  Feed the dog, just in case
   wdt_reset();
-#ifdef USE_MQTT_PUBLISHER
-  // Publish data on a thread
-  threadControl.run();
-#endif
+
+  #ifdef USE_MQTT_PUBLISHER
+    // Publish data on a thread
+    threadControl.run();
+  #endif
 }
 
 #ifdef USE_MQTT_PUBLISHER
 void publisher() {
-  ++value;
-  mqtt.publish("test_out/hello_world", s+"Hello World! - No. "+value);
+  String time = getRealTime();
+  Serial_printf("pub <time>: %s\n",time.c_str());
+  mqtt.publish("time", time);
 }
 #endif
 
