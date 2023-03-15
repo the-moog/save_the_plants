@@ -1,23 +1,7 @@
 
-#define USE_WIFI_NETWORK
-#define USE_WEBSOCKETS
-#define USE_SSL
-#undef USE_MQTT_PUBLISHER
-#undef USE_HTTP_ERR_PRETTY
+#include "mqtt_app.h"
 
-#include <ESP8266HTTPClient.h>
-#include <PubSubClient.h>
-#include <PubSubClientTools.h>
-#include <string>
-#include <stdexcept>
-	
 
-#ifdef USE_MQTT_PUBLISHER
-#include <Thread.h>
-#include <ThreadController.h>
-#endif
-
-#include "secrets.h"
 
 // Ensure the compiler does not get the storage wrong
 // for strings as otherwise they take up a lot of our 4k stack
