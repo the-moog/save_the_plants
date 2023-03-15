@@ -318,14 +318,21 @@ def main():
 
     args = parser.parse_args()
     url = args.server if args.server is not None else args.url if args.url is not None else None
+    res = None
     if args.url is not None or ":" in args.server:
         res = urllib.parse.urlsplit(url, scheme="https")
         res._replace(scheme="https")
+        url = urllib.parse.urljoin(res)
+        server = res.hostname
     else:
         url = args.server
-    server = res.hostname
+        server = args.server
+
     try:
-        port = res.port
+        if res is not None:
+            port = int(res.port)
+        else:
+            raise ValueError
     except ValueError:
         if args.port is None:
             WarningMessage(f"Invalid port in url {url}, using default: {DEFAULT_PORT}")
