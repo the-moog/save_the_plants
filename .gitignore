@@ -56,4 +56,4 @@ dkms.conf
 **/secrets.h
 
 #Auto generated
-mqtt/certs.h
+**/certs.h
