@@ -1,11 +1,11 @@
+#!/usr/bin/env python3
+
 import pcpp
 from io import StringIO, IOBase
 import argparse
 import sys
 from typing import NewType, Optional, TypeVar
 from pathlib import Path
-from collections.abc import Collection
-import os
 
 CMacros = NewType('CMacros', list[str])
 PathLike = TypeVar("PathLike", Path, str)
@@ -60,7 +60,9 @@ def process(headers: list) -> dict:
         try:
             res = get_c_defines(args.defines, header)
         except IOError:
-            print(f"I don't know how to handle {input}({type(input)})")
+            print(f"I don't know how to handle {header}({type(header)})")
+            if not Path(header).exists():
+                print(f"but the path {header} does not exist")
         else:
             defines.update(res)
     return defines
