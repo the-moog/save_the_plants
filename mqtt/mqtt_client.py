@@ -17,12 +17,10 @@ MQTT_BROKER = defines["MQTT_HOST"]
 MQTT_PORT = defines["MQTT_PORT"]
 
 
-feeds = {
-    "ONOFF0": f'dev/onoff0',        # /dev/onoff<ch> <0|1>  ch=0|1, 1=on 0=off
-    "ONOFF1": f'dev/onoff1',
-    "PULSE_MS": f'cfg/pulse_ms',    # Pulse duration in milliseconds (float)
-    "PULSE0": f'dev/pulse0',        # /dev/pulse<ch>   ch=0|1 - Invert on/off state for cfg/pulse_ms
-    "PULSE1": f'dev/pulse1'
+feeds = {                           # feed              msg     - Notes:
+    "ONOFF": f'dev/onoff/#',        # /dev/onoff/<ch>   <0|1>   - Turn on or off, ch=0|1, 1=on 0=off
+    "PULSE_MS": f'cfg/pulse_ms',    # /cfg/pulse_ms     <ms>    - Pulse duration in milliseconds (float)
+    "PULSE": f'dev/pulse/#',        # /dev/pulse/<ch>   n/a     - Invert on/off state for cfg/pulse_ms
 }
 
 
