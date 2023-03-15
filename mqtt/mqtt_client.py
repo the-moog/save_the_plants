@@ -15,7 +15,7 @@ MQTT_KEY = defines['MQTT_KEY']
 MQTT_USERNAME = defines['MQTT_USERNAME']
 MQTT_BROKER = defines["MQTT_HOST"]
 MQTT_PORT = defines["MQTT_PORT"]
-CLIENT_ID = "devsys-mqtt-py-{id}".format(id=random.randint(0, 1000))
+
 
 feeds = {
     "ONOFF0": f'dev/onoff0',        # /dev/onoff<ch> <0|1>  ch=0|1, 1=on 0=off
@@ -26,11 +26,17 @@ feeds = {
 }
 
 
+def random_client_id():
+    return "devsys-mqtt-py-{id}".format(id=random.randint(0, 1000))
+
 class RemoteRelays:
     
-    def __init__(self):
-        self.client = mqtt_client.Client(CLIENT_ID, transport='websockets')
-        self.thread = threading.Thread(target=self.client.loop_forever())
+    def __init__(self, client_id=None):
+        if client_id is None:
+            client_id = random_client_id()
+
+        self.client = mqtt_client.Client(client_id, transport='websockets')
+        self.thread = threading.Thread(target=self.client.loop_forever)
         self.thread.start()
 
     def on_connect(self, client, userdata, flags, rc):
@@ -62,6 +68,10 @@ class RemoteRelays:
             self.set_pulse_ms(ms)
         self.client._client.publish(feeds["PULSE{channel}"])
 
+    @property
+    def is_connected(self):
+        return self.client.is_connected()
+
     def connect(self):
         
         #cert = get_ca_pem(MQTT_BROKER, MQTT_PORT)
@@ -76,41 +86,65 @@ class RemoteRelays:
         return self.client
 
 
-rr = RemoteRelays()
-
-
 class TestPattern(threading.Thread):
     def __init__(self):
+        self.rr = RemoteRelays()
         self.evt = threading.Event()
         super().__init__()
         self.start()
 
     def run(self):
+        self.rr.connect()
         while True:
-            if rr.client.is_connected:
+            if self.rr.is_connected:
                 channel = random.choice([0,1])
                 value = random.choice([0,1])
                 print(f'Publishing {value} to onoff{channel}')
-                rr.power_onoff(channel, value)
+                self.rr.power_onoff(channel, value)
             if self.evt.is_set():
                 break
             time.sleep(5)
 
+        self.rr.disconnect()
 
+
+class OccasionalPulse(threading.Thread):
+    def __init__(self):
+        self.rr = RemoteRelays()
+        self.evt = threading.Event()
+        super().__init__()
+        self.start()
+
+    def run(self):
+        self.rr.connect()
+        while True:
+            if self.rr.client.is_connected():
+                channel = random.choice([0,1])
+                value = random.randint(10*60)
+                if value == 500:
+                    print(f'Publishing {value} to onoff{channel}')
+                    self.rr.power_pulse(channel)
+            if self.evt.is_set():
+                break
+            time.sleep(1)
+        self.rr.disconnect()
 
 
 
 if __name__ == '__main__':
     tp = TestPattern()
-    rr.connect()
+    op = OccasionalPulse()
 
+    print("Press ctrl-c to stop")
     while True:
         try:
             time.sleep(10)
         except InterruptedError:
             tp.evt.set()
+            op.evt.set()
             break
     tp.join()
-    rr.disconnect()
-    
+    op.join()
+
+
         
