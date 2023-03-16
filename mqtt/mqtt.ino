@@ -149,9 +149,9 @@ void handle_pulse(int chan, const std::string & msg) {
   // Handle overflows as millis() wrap every 50 days or so
   if (next > 0xFFFFFFFFL) next -= 0xFFFFFFFFL;
 
-  // If the result is next == 0LL then make it 1 as
+  // If the result is next == 0ULL then make it 1 as
   // zero is used for never.
-  if (next == 0LL) next= 1LL;
+  if (next == 0ULL) next= 1ULL;
 
   next_pulse_evt_ms[chan] = (unsigned long)next;
   if (! pulse_active ) onoff[chan] = ! onoff[chan];
@@ -172,26 +172,28 @@ void setupIO()
 
 // This makes the initial MQTT connection
 // by upgrading a HTTPS session to a WSS session
-ROMSTR(uid, "QDEFSYS");
+
 int mqttConnect() {
   wdt_reset();
 
   int current_state = mqttClient.state();
+  int new_state=current_state;
 
   if (next_connect > millis())return current_state;
-  next_connect = millis() + 10000LL;
+  next_connect = millis() + 10000ULL;
 
   if(current_state == MQTT_CONNECTED) {
     //ws->ping();
     return MQTT_CONNECTED;
   }
   MSG("Connecting MQTT:\r\n");
-  //mqttClient.setCallback(MQTTcallback);
-  bool connected = mqttClient.connect(uid, MQTT_USERNAME, MQTT_KEY);
+  const String uid="QDEVSYS_"+WiFi.macAddress();
+  bool connected = mqtt.connect(String(uid), String(F(MQTT_USERNAME)), String(F(MQTT_KEY)));
   if (connected) {
-    MSG_CONNECTED;
+    Serial_printf("Connected: ID=%s\n", uid.c_str());
+
+    mqtt.subscribe(String(F("cfg/pulse_s")), callback_pulse_ms);
     /*
-    mqtt.subscribe(F("cfg/pulse_s"), MAKE_CALLBACK(callback_pulse_ms));
     mqtt.subscribe(F("dev/onoff/0"), MAKE_CALLBACK(callback_onoff));
     mqtt.subscribe(F("dev/onoff/1"), MAKE_CALLBACK(callback_onoff));
     mqtt.subscribe(F("dev/pulse/0"), MAKE_CALLBACK(callback_pulse));
@@ -201,12 +203,9 @@ int mqttConnect() {
     MSG("Connect Fail\r\n");
   }
   wdt_reset();
+  new_state = mqttClient.state();
 
-  MSG("MQTT Old State: ");
-  Serial_println(current_state);
-  current_state = mqttClient.state();
-  MSG("MQTT New State: ");
-  Serial_println(current_state);
+  Serial_printf("MQTT State: %d -> %d\n",current_state, new_state);
 
   return current_state;
 }
@@ -308,7 +307,7 @@ void setup() {
 
 #ifdef USE_MQTT_PUBLISHER
   // Enable Thread
-  thread.onRun(publisher);
+  thread.onRun(pub_ntp_time);
   thread.setInterval(10000);
   threadControl.add(&thread);
 #endif
@@ -348,7 +347,7 @@ void loop() {
 }
 
 #ifdef USE_MQTT_PUBLISHER
-void publisher() {
+void pub_ntp_time() {
   String time = getRealTime();
   Serial_printf("pub <time>: %s\n",time.c_str());
   mqtt.publish("time", time);
