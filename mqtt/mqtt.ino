@@ -68,7 +68,8 @@ PubSubClientTools mqtt(mqttClient);
 
 #ifdef USE_MQTT_PUBLISHER
 ThreadController threadControl = ThreadController();
-Thread thread = Thread();
+Thread ntp_hms_thread = Thread();
+Thread ntp_mil_thread = Thread();
 #endif
 
 #define pin_onoff_prod 4
@@ -104,6 +105,7 @@ void callback_pulse_ms(const std::string & topic, const std::string & msg) {
   if ((value * 1000) > 65535) value = 65535.0;
   if (value < 0) value = 0.0;
   pulse_ms = (unsigned short)(value * 1000.0); 
+  Serial_printf("sub <cfg>: Pulse now %8.4f sec\n", value);
 }
 
 // Called by MQTT
@@ -120,6 +122,10 @@ void callback_pulse(const std::string & topic, const std::string & msg) {
   handle_pulse(chan, msg);
 }
 
+const char * b2oo(bool val){
+  return val?"On":"Off";
+}
+
 // Handle the messages for onoff
 void handle_onoff(int chan, const std::string & msg) {
   signed char val = msg[0] - '0';
@@ -128,10 +134,12 @@ void handle_onoff(int chan, const std::string & msg) {
   bool prev = onoff[chan];
   onoff[chan] = val==1?true:false;
 
+  Serial_printf("sub <oo%d>: %s->%s\n", chan, b2oo(prev), b2oo(onoff[chan]));
+
   // Nothing to do
   if (onoff[chan] == prev)return;
 
-  Serial_printf("Relay chan %d -> %s\n", chan, val?"On":"Off");
+  Serial_printf(".. Relay switched\n");
 }
 
 // Requesting a pulse either makes a pulse now (on->off-> or off->on->off)
@@ -156,7 +164,7 @@ void handle_pulse(int chan, const std::string & msg) {
   next_pulse_evt_ms[chan] = (unsigned long)next;
   if (! pulse_active ) onoff[chan] = ! onoff[chan];
   
-  Serial_printf("%3.4fs pulse triggered on chan %d\r\n", pulse_ms / 1000.0, chan);
+  Serial_printf("%8.4fs pulse triggered on chan %d\r\n", pulse_ms / 1000.0, chan);
 }
 
 
@@ -193,12 +201,11 @@ int mqttConnect() {
     Serial_printf("Connected: ID=%s\n", uid.c_str());
 
     mqtt.subscribe(String(F("cfg/pulse_s")), callback_pulse_ms);
-    /*
-    mqtt.subscribe(F("dev/onoff/0"), MAKE_CALLBACK(callback_onoff));
-    mqtt.subscribe(F("dev/onoff/1"), MAKE_CALLBACK(callback_onoff));
-    mqtt.subscribe(F("dev/pulse/0"), MAKE_CALLBACK(callback_pulse));
-    mqtt.subscribe(F("dev/pulse/1"), MAKE_CALLBACK(callback_pulse));
-    */
+    mqtt.subscribe(String(F("dev/onoff/0")), callback_onoff);
+    mqtt.subscribe(String(F("dev/onoff/1")), callback_onoff);
+    mqtt.subscribe(String(F("dev/pulse/0")), callback_pulse);
+    mqtt.subscribe(String(F("dev/pulse/1")), callback_pulse);
+
   } else {
     MSG("Connect Fail\r\n");
   }
@@ -307,9 +314,12 @@ void setup() {
 
 #ifdef USE_MQTT_PUBLISHER
   // Enable Thread
-  thread.onRun(pub_ntp_time);
-  thread.setInterval(10000);
-  threadControl.add(&thread);
+  ntp_hms_thread.onRun(pub_ntp_time);
+  ntp_mil_thread.onRun(pub_mil_time);
+  ntp_hms_thread.setInterval(10000);
+  ntp_mil_thread.setInterval(1000);
+  threadControl.add(&ntp_hms_thread);
+  threadControl.add(&ntp_mil_thread);
 #endif
 }
 
@@ -319,6 +329,7 @@ void relayLoop() {
     if ((millis() > next_pulse_evt_ms[chan]) && (next_pulse_evt_ms[chan] !=0L)) {
       onoff[chan] = !onoff[chan];
       next_pulse_evt_ms[chan] = 0L;
+      Serial_printf("pulse tog %d\n", chan);
     }
     digitalWrite(pin_onoff_preprod, onoff[chan]);
   }
@@ -349,8 +360,14 @@ void loop() {
 #ifdef USE_MQTT_PUBLISHER
 void pub_ntp_time() {
   String time = getRealTime();
-  Serial_printf("pub <time>: %s\n",time.c_str());
-  mqtt.publish("time", time);
+  Serial_printf("pub <ntp/hms>: %s\n",time.c_str());
+  mqtt.publish("ntp/hms", time);
+}
+
+void pub_mil_time() {
+  String time(millis());
+  Serial_printf("pub <ntp/mil>: %s\n", time.c_str());
+  mqtt.publish("ntp/mil", time);
 }
 #endif
 
