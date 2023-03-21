@@ -19,7 +19,7 @@ MQTT_PORT = defines["MQTT_PORT"]
 
 feeds = {                           # feed              msg     - Notes:
     "ONOFF": f'dev/onoff/#',        # /dev/onoff/<ch>   <0|1>   - Turn on or off, ch=0|1, 1=on 0=off
-    "PULSE_MS": f'cfg/pulse_ms',    # /cfg/pulse_ms     <ms>    - Pulse duration in milliseconds (float)
+    "PULSE_MS": f'cfg/pulse_s',     # /cfg/pulse_s      <s>     - Pulse duration in seconds (float) >= 1ms
     "PULSE": f'dev/pulse/#',        # /dev/pulse/<ch>   n/a     - Invert on/off state for cfg/pulse_ms
 }
 
@@ -111,20 +111,29 @@ class OccasionalPulse(threading.Thread):
         self.rr = RemoteRelays()
         self.evt = threading.Event()
         super().__init__()
+        self.last_time = None
+        self.next_time = None
         self.start()
+        
+    @property
+    def next_pulse(self):
+        if self.last_time is None or time.time() > self.last_time:
+            now = time.time()
+            self.last_time = now
+            self.next_time = now + random.randint(1*60, 2*60)
+            return True
+        return False
 
     def run(self):
         self.rr.connect()
         while True:
-            if self.rr.client.is_connected():
+            if self.rr.is_connected and self.next_pulse:
                 channel = random.choice([0,1])
-                value = random.randint(10*60)
-                if value == 500:
-                    print(f'Publishing {value} to onoff{channel}')
-                    self.rr.power_pulse(channel)
+                print(f'Publishing pulse to channel {channel}')
+                self.rr.power_pulse(channel)
             if self.evt.is_set():
                 break
-            time.sleep(1)
+            time.sleep(0.1)
         self.rr.disconnect()
 
 

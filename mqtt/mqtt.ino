@@ -1,6 +1,6 @@
 
 #include "mqtt_defs.h"
-
+#include <WString.h>
 
 
 #ifndef USE_SSL
@@ -64,7 +64,7 @@ const char * get_http_error(int error) {
 WebSocketClient wsClient(netClient, myhost_fqdn, myhost_port);
 WebSocketStreamClient wsStream(wsClient, "/mqtt");
 PubSubClient mqttClient(wsStream);
-PubSubClientTools mqtt(mqttClient);
+PubSubClientMulti mqtt(mqttClient);
 
 #ifdef USE_MQTT_PUBLISHER
 ThreadController threadControl = ThreadController();

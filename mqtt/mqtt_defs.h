@@ -4,7 +4,7 @@
 
 #include <ESP8266HTTPClient.h>
 #include <PubSubClient.h>
-#include <PubSubClientTools.h>
+#include <PubSubClientMulti.h>
 #include <string>
 #include <stdexcept>
 
