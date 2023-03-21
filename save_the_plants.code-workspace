@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../ArduinoData"
+		},
+		{
+			"path": "../mqtt-over-wss"
 		}
 	],
 	"settings": {
