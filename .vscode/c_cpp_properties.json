@@ -6,8 +6,8 @@
         "LibBase": "${workspaceFolder}/../libraries",
         "Libraries": [
             "${LibBase}/ArduinoWebsocketMQTTClient/ArduinoHttpClient/src",
-            "${LibBase}/ArduinoWebsocketMQTTClient/WebSocketStreamClient/src",
-            "${LibBase}/PubSubClientTools",
+            "${LibBase}/ArduinoWebsocketMQTTClient/WebSocketStreamClient",
+            "${LibBase}/PubSubClientMulti",
             "${LibBase}/PubSubClient/src",
             "${LibBase}/ArduinoThread"
         ],
@@ -76,7 +76,8 @@
                 "FLASHMODE_DOUT",
                 "USBCON"
             ],
-            "mergeConfigurations": true
+            "mergeConfigurations": true,
+            "configurationProvider": "ms-vscode.makefile-tools"
         }
     ]
 }

@@ -65,7 +65,14 @@
 			"map": "cpp",
 			"iostream": "cpp",
 			"istream": "cpp",
-			"sstream": "cpp"
+			"sstream": "cpp",
+			"forward_list": "cpp",
+			"unordered_set": "cpp",
+			"rope": "cpp",
+			"slist": "cpp",
+			"span": "cpp",
+			"regex": "cpp",
+			"valarray": "cpp"
 		},
 		"arduino.disableIntelliSenseAutoGen": true,
 		"arduino.logLevel": "verbose",

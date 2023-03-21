@@ -57,4 +57,5 @@
     "arduino.disableIntelliSenseAutoGen": true,
     "arduino.logLevel": "verbose",
     "arduino.useArduinoCli": true,
+    "cmake.configureOnOpen": false,
 }
